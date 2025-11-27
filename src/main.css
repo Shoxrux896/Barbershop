@@ -1,0 +1,486 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background: #0a0a0a;
+    color: #fff;
+}
+
+header {
+    background: #000;
+    padding: 20px 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 2px solid #d4af37;
+}
+
+nav {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.logo {
+    font-size: 28px;
+    font-weight: bold;
+    color: #d4af37;
+}
+
+nav ul {
+    list-style: none;
+    display: flex;
+    gap: 30px;
+}
+
+.nav-toggle {
+    display: none;
+    background: transparent;
+    border: none;
+    gap: 4px;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    padding: 8px;
+}
+
+.nav-toggle .bar {
+    width: 22px;
+    height: 2px;
+    background: #fff;
+    display: block;
+    border-radius: 2px;
+}
+
+.nav-toggle {
+    transition: transform 180ms ease;
+}
+
+.nav-toggle .bar {
+    transition: transform 200ms ease, opacity 150ms ease;
+}
+
+.nav-toggle.open .bar:nth-child(1) {
+    transform: translateY(6px) rotate(45deg);
+}
+
+.nav-toggle.open .bar:nth-child(2) {
+    opacity: 0;
+    transform: scaleX(0.2);
+}
+
+.nav-toggle.open .bar:nth-child(3) {
+    transform: translateY(-6px) rotate(-45deg);
+}
+
+nav a {
+    color: #fff;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+nav a:hover {
+    color: #d4af37;
+}
+
+.hero {
+    background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600"><rect fill="%23333" width="1200" height="600"/></svg>');
+    height: 600px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background-size: cover;
+    background-position: center;
+}
+
+.hero h1 {
+    font-size: 56px;
+    margin-bottom: 20px;
+    color: #d4af37;
+}
+
+.hero p {
+    font-size: 24px;
+    margin-bottom: 30px;
+    color: #ccc;
+}
+
+.btn {
+    background: #d4af37;
+    color: #000;
+    padding: 15px 40px;
+    text-decoration: none;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 5px;
+    transition: transform 0.3s, background 0.3s;
+    display: inline-block;
+}
+
+.btn:hover {
+    transform: scale(1.05);
+    background: #f0c44a;
+}
+
+section {
+    max-width: 1200px;
+    margin: 80px auto;
+    padding: 0 20px;
+}
+
+h2 {
+    font-size: 42px;
+    margin-bottom: 40px;
+    text-align: center;
+    color: #d4af37;
+}
+.services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 30px;
+}
+
+.service-card {
+    background: #1a1a1a;
+    padding: 30px;
+    border-radius: 10px;
+    border: 2px solid #333;
+    transition: transform 0.3s, border-color 0.3s;
+}
+
+.service-card:hover {
+    transform: translateY(-5px);
+    border-color: #d4af37;
+}
+
+.service-card h3 {
+    color: #d4af37;
+    font-size: 24px;
+    margin-bottom: 15px;
+}
+
+.service-card p {
+    color: #ccc;
+    margin-bottom: 15px;
+    line-height: 1.6;
+}
+
+.price {
+    font-size: 28px;
+    font-weight: bold;
+    color: #fff;
+}
+
+.portfolio-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.portfolio-item {
+    background: #333;
+    height: 300px;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.3s;
+}
+
+.portfolio-item:hover {
+    transform: scale(1.05);
+}
+
+.portfolio-item::after {
+    
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: #d4af37;
+    color: #000;
+    padding: 8px 15px;
+    border-radius: 5px;
+    font-weight: bold;
+}
+.reviews-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 30px;
+}
+
+.review-card {
+    background: #1a1a1a;
+    padding: 30px;
+    border-radius: 10px;
+    border-left: 4px solid #d4af37;
+}
+
+.stars {
+    color: #d4af37;
+    font-size: 24px;
+    margin-bottom: 15px;
+}
+
+.review-text {
+    color: #ccc;
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+
+.review-author {
+    color: #d4af37;
+    font-weight: bold;
+}
+
+.rating-summary {
+    background: #1a1a1a;
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.rating-number {
+    font-size: 64px;
+    color: #d4af37;
+    font-weight: bold;
+}
+.booking-form {
+    max-width: 600px;
+    margin: 0 auto;
+    background: #1a1a1a;
+    padding: 40px;
+    border-radius: 10px;
+}
+
+/* Admin panel styles */
+.admin-panel {
+    max-width: 1100px;
+    margin: 40px auto;
+    color: #fff
+}
+
+.admin-controls input,
+.admin-controls select {
+    padding: 8px 10px;
+    background: #0b0b0b;
+    border: 1px solid #333;
+    color: #fff
+}
+
+.admin-header .chip {
+    background: #111;
+    padding: 6px 10px;
+    border-radius: 20px;
+    border: 1px solid #333
+}
+
+.chip--danger {
+    background: #3b0b0b;
+    border-color: #6b1b1b
+}
+
+.admin-table-wrap {
+    overflow: auto;
+    border-radius: 8px
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 900px
+}
+
+.admin-table th,
+.admin-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #222;
+    text-align: left
+}
+
+.admin-table thead th {
+    background: #0f0f0f;
+    color: #d4af37;
+    position: sticky;
+    top: 0
+}
+
+.row--processed td {
+    opacity: 0.7
+}
+
+.btn {
+    background: #d4af37;
+    color: #000;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer
+}
+
+.btn--small {
+    padding: 6px 8px;
+    font-size: 13px
+}
+
+.btn--danger {
+    background: #b00020;
+    color: #fff
+}
+
+.chip {
+    display: inline-block;
+    font-size: 13px
+}
+.pagination {
+    display: flex;
+    gap: 12px;
+    align-items: center
+}
+
+.page-btn {
+    background: #111;
+    color: #fff;
+    border: 1px solid #333;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer
+}
+
+.page-btn[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed
+}
+
+.page-info {
+    color: #ccc
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    color: #d4af37;
+    font-weight: bold;
+}
+
+input,
+select,
+textarea {
+    width: 100%;
+    padding: 12px;
+    background: #000;
+    border: 2px solid #333;
+    border-radius: 5px;
+    color: #fff;
+    font-size: 16px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: #d4af37;
+}
+
+/* Contact */
+.contact-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 30px;
+    margin-top: 40px;
+}
+
+.contact-card {
+    background: #1a1a1a;
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.contact-card h3 {
+    color: #d4af37;
+    margin-bottom: 15px;
+}
+
+footer {
+    background: #000;
+    text-align: center;
+    padding: 30px 20px;
+    border-top: 2px solid #d4af37;
+    margin-top: 80px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.icon{
+    width: 40px;
+    height: 40px;
+}
+
+@media (max-width: 768px) {
+    .nav {
+        align-items: center;
+    }
+
+  
+    .nav-toggle {
+        display: flex
+    }
+
+    
+    nav ul {
+        position: absolute;
+        top: 68px;
+        right: 20px;
+        background: #0b0b0b;
+        padding: 8px 18px;
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-width: 160px;
+        z-index: 200;
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+        transform: translateY(-6px);
+        transition: max-height 260ms ease, opacity 220ms ease, transform 220ms ease;
+    }
+
+   
+    .nav.nav--open ul {
+        max-height: 480px;
+        opacity: 1;
+        transform: translateY(0);
+    }
+    nav a {
+        padding: 8px 6px;
+        display: block
+    }
+
+    .hero h1 {
+        font-size: 36px;
+    }
+
+    .hero p {
+        font-size: 18px;
+    }
+}
