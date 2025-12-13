@@ -1,45 +1,64 @@
-import { useState } from 'react'
+import { useState } from 'react';
+import logo from '../assets/logo.png';
 
-const Header = () =>{
-    const [open, setOpen] = useState(false)
+const Header = () => {
+  const [open, setOpen] = useState(false);
 
-     const handleScrollToSection = (e, targetId) => {
+  const handleScrollToSection = (e, targetId) => {
     e.preventDefault();
-    const targetElement = document.getElementById(targetId);
-    if (targetElement) {
-      targetElement.scrollIntoView({
+    const target = document.getElementById(targetId);
+    if (target) {
+      target.scrollIntoView({
         behavior: 'smooth',
         block: 'start',
       });
     }
-  
+    setOpen(false); 
   };
-    return(
-        <header>
-        <nav className={open ? 'nav nav--open' : 'nav'}>
-            <div className="logo">💈 ELITE BARBER</div>
 
-            <button
-                className={"nav-toggle" + (open ? ' open' : '')}
-                aria-label={open ? 'Закрыть меню' : 'Открыть меню'}
-                aria-expanded={open}
-                onClick={()=>setOpen(v=>!v)}
-            >
-                <span className="bar" />
-                <span className="bar" />
-                <span className="bar" />
-            </button>
+  const navItems = [
+    { id: 'home', label: 'Главная' },
+    { id: 'services', label: 'Услуги' },
+    { id: 'portfolio', label: 'Работы' },
+    { id: 'booking', label: 'Запись' },
+    { id: 'contact', label: 'Контакты' },
+  ];
 
-            <ul onClick={()=>setOpen(false)}>
-                <li><a href="#home" onClick={(e) => handleScrollToSection(e,'home')}>Главная</a></li>
-                <li><a href="#services" onClick={(e) => handleScrollToSection(e,'services')}>Услуги</a></li>
-                <li><a href="#portfolio" onClick={(e) => handleScrollToSection(e,'portfolio')}>Работы</a></li>
-            
-                <li><a href="#booking" onClick={(e) => handleScrollToSection(e,'booking')}>Запись</a></li>
-                <li><a href="#contact" onClick={(e) => handleScrollToSection(e,'contact')}>Контакты</a></li>
-            </ul>
-        </nav>
+  return (
+    <header>
+      <nav className={open ? 'nav nav--open' : 'nav'}>
+        
+        <div className="logo">
+          <img src={logo} alt="logo" />
+        </div>
+
+        <button
+          className={`nav-toggle ${open ? 'open' : ''}`}
+          aria-label={open ? 'Закрыть меню' : 'Открыть меню'}
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+        >
+          <span className="bar" />
+          <span className="bar" />
+          <span className="bar" />
+        </button>
+
+        <ul>
+          {navItems.map((item) => (
+            <li key={item.id}>
+              <a
+                href={`#${item.id}`}
+                onClick={(e) => handleScrollToSection(e, item.id)}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+
+      </nav>
     </header>
-    );
-}
+  );
+};
+
 export default Header;

@@ -1,13 +1,8 @@
-// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, getDocs, updateDoc, deleteDoc, doc, onSnapshot, where } from 'firebase/firestore'
-import { getAuth, signInWithEmailAndPassword, signOut as fbSignOut } from 'firebase/auth'
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, getDocs, updateDoc, deleteDoc, doc, onSnapshot, where, limit } from 'firebase/firestore'
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut as fbSignOut } from 'firebase/auth'
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyA85t7qgFAJiiIzVsVGpyWIzPxCzrDyAjQ",
   authDomain: "barbershop-c7b1e.firebaseapp.com",
@@ -18,18 +13,14 @@ const firebaseConfig = {
   measurementId: "G-EXBHXQ2MYT"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 
-// Firestore and Auth
 const db = getFirestore(app)
 const auth = getAuth(app)
 
-// Helper: add booking
-async function addBooking(data){
+async function addBooking(data) {
   const col = collection(db, 'bookings')
-  // normalize date/time strings to avoid mismatches (trim / ensure string)
   const safe = {
     ...data,
     date: data && data.date ? String(data.date) : '',
@@ -39,15 +30,15 @@ async function addBooking(data){
   return docRef.id
 }
 
-async function fetchBookings(){
+async function fetchBookings() {
   const q = query(collection(db, 'bookings'), orderBy('createdAt', 'desc'))
   const snap = await getDocs(q)
   return snap.docs.map(d => ({ id: d.id, ...d.data() }))
 }
 
-async function fetchBookingsByDate(dateString){
-  try{
-    const q = query(collection(db, 'bookings'), where('date', '==', dateString), orderBy('createdAt','desc'))
+async function fetchBookingsByDate(dateString) {
+  try {
+    const q = query(collection(db, 'bookings'), where('date', '==', dateString), orderBy('createdAt', 'desc'))
     const snap = await getDocs(q)
     return snap.docs.map(d => {
       const data = d.data() || {}
@@ -58,9 +49,9 @@ async function fetchBookingsByDate(dateString){
         time: data.time ? String(data.time).trim() : ''
       })
     })
-  }catch(err){
-    // If composite index isn't ready yet or required, fall back to simple where() without orderBy
-    if(String(err).toLowerCase().includes('requires an index')){
+  } catch (err) {
+
+    if (String(err).toLowerCase().includes('requires an index')) {
       const q2 = query(collection(db, 'bookings'), where('date', '==', dateString))
       const snap2 = await getDocs(q2)
       return snap2.docs.map(d => {
@@ -77,34 +68,41 @@ async function fetchBookingsByDate(dateString){
   }
 }
 
-function onBookingsSnapshot(cb){
-  const q = query(collection(db, 'bookings'), orderBy('createdAt', 'desc'))
-  // provide error callback to surface permission/index issues
+// ... (other imports remain handled by context, but for safety I will target the specific function block)
+
+function onBookingsSnapshot(cb) {
+  // Limit to 70 most recent bookings for performance
+  const q = query(collection(db, 'bookings'), orderBy('createdAt', 'desc'), limit(70))
+
   return onSnapshot(q, snapshot => {
     cb(snapshot.docs.map(d => ({ id: d.id, ...d.data() })))
   }, err => {
     console.error('onBookingsSnapshot error', err)
-    // notify caller that nothing could be loaded
+
     try { cb([]) } finally { /* ignore errors from callback */ }
   })
 }
 
-async function markProcessed(id, value=true){
+async function markProcessed(id, value = true) {
   const d = doc(db, 'bookings', id)
   await updateDoc(d, { processed: value })
 }
 
-async function removeBooking(id){
+async function removeBooking(id) {
   const d = doc(db, 'bookings', id)
   await deleteDoc(d)
 }
 
-async function signIn(email, password){
+async function signIn(email, password) {
   return signInWithEmailAndPassword(auth, email, password)
 }
 
-async function signOut(){
+async function signUp(email, password) {
+  return createUserWithEmailAndPassword(auth, email, password)
+}
+
+async function signOut() {
   return fbSignOut(auth)
 }
 
-export { app, analytics, db, auth, addBooking, fetchBookings, fetchBookingsByDate, onBookingsSnapshot, markProcessed, removeBooking, signIn, signOut }
+export { app, analytics, db, auth, addBooking, fetchBookings, fetchBookingsByDate, onBookingsSnapshot, markProcessed, removeBooking, signIn, signUp, signOut, onAuthStateChanged }

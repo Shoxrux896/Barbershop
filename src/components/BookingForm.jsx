@@ -1,6 +1,21 @@
 import { useState, useEffect } from 'react'
 import { addBooking, fetchBookingsByDate } from '../firebase'
 
+const getNextDays = (count = 14) => {
+    const out = []
+    const names = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
+    for (let i = 0; i < count; i++) {
+        const d = new Date()
+        d.setDate(d.getDate() + i)
+        const yyyy = d.getFullYear()
+        const mm = String(d.getMonth() + 1).padStart(2, '0')
+        const dd = String(d.getDate()).padStart(2, '0')
+        const dayName = names[d.getDay()]
+        out.push({ value: `${yyyy}-${mm}-${dd}`, label: `${dayName} ${dd}.${mm}.${yyyy}` })
+    }
+    return out
+}
+
 const BookingForm = () => {
     const [name, setName] = useState('')
     const [phone, setPhone] = useState('')
@@ -12,7 +27,6 @@ const BookingForm = () => {
     const [message, setMessage] = useState(null)
     const [loading, setLoading] = useState(false)
 
-    // Simple rate-limit: one booking per 30 seconds per browser
     const canSubmit = () => {
         const last = localStorage.getItem('lastBookingTime')
         if (!last) return true
@@ -28,11 +42,10 @@ const BookingForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault()
 
-        // Honeypot field to avoid bots
         const form = e.target
-        const hp = form.querySelector('input[name="website"]')
+        // Check local spam first
+        const hp = form.querySelector('input[name="fax"]')
         if (hp && hp.value) {
-            // suspicious
             setMessage({ type: 'error', text: 'Ошибка отправки.' })
             return
         }
@@ -47,14 +60,12 @@ const BookingForm = () => {
             return
         }
 
-        // Double-check slot availability just before submitting
         try {
             const current = await fetchBookingsByDate(date)
             const timesNow = current.map(r => r.time)
             if (timesNow.includes(time)) {
-                // refresh bookedTimes and try to pick nearest free slot automatically
                 setBookedTimes(timesNow)
-                const allSlots = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00']
+                const allSlots = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00']
                 const free = allSlots.filter(s => !timesNow.includes(s))
                 if (free.length) {
                     setTime(free[0])
@@ -67,22 +78,26 @@ const BookingForm = () => {
             }
         } catch (err) {
             console.warn('Не удалось проверить текущие брони', err)
-            // proceed anyway — server-side check is recommended
         }
 
         setLoading(true)
         setMessage(null)
         try {
-            const newId = await addBooking({ name, phone, service, date, time })
+            const newId = await addBooking({
+                name,
+                phone,
+                service,
+                date,
+                time
+            })
             localStorage.setItem('lastBookingTime', String(Date.now()))
             setMessage({ type: 'success', text: 'Запись принята. Спасибо!' })
             console.log('Booking created, id=', newId)
-            // refresh booked times so UI reflects new booking
             try {
                 const refreshed = await fetchBookingsByDate(date)
                 setBookedTimes(refreshed.map(r => r.time))
             } catch (e) { console.warn('refresh failed', e) }
-            // try browser notification
+
             if (typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
                 Notification.requestPermission().then(p => { if (p === 'granted') notifyBrowser('Новая запись', `Запись от ${name} на ${date} ${time}`) })
             } else {
@@ -102,30 +117,11 @@ const BookingForm = () => {
         }
     }
 
-    // prepare next 14 days for easy selection (set once)
-    const getNextDays = (count = 14) => {
-        const out = []
-        const names = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
-        for (let i = 0; i < count; i++) {
-            const d = new Date()
-            d.setDate(d.getDate() + i)
-            const yyyy = d.getFullYear()
-            const mm = String(d.getMonth() + 1).padStart(2, '0')
-            const dd = String(d.getDate()).padStart(2, '0')
-            const dayName = names[d.getDay()]
-            out.push({ value: `${yyyy}-${mm}-${dd}`, label: `${dayName} ${dd}.${mm}.${yyyy}` })
-        }
-        return out
-    }
-
     useEffect(() => {
         const d = getNextDays(14)
-        // initialize days with basic info
-        const init = d.map(x => ({ ...x, taken: 0, total: 11 }))
+        const init = d.map(x => ({ ...x, taken: 0, total: 12 }))
         setDays(init)
         if (!date && init.length) setDate(init[0].value)
-
-        // fetch booked counts for these days to show availability
         let mounted = true
             ; (async () => {
                 try {
@@ -134,10 +130,9 @@ const BookingForm = () => {
                     if (!mounted) return
                     const updated = init.map((day, i) => {
                         const taken = Array.isArray(results[i]) ? results[i].filter(r => r.time).length : 0
-                        return { ...day, taken, total: 11 }
+                        return { ...day, taken, total: 12 }
                     })
                     setDays(updated)
-                    // if current selected date is fully booked, choose next free
                     const cur = updated.find(d => d.value === date) || updated[0]
                     if (cur && cur.taken >= cur.total) {
                         const nextFree = updated.find(d => d.taken < d.total)
@@ -153,10 +148,8 @@ const BookingForm = () => {
             })()
 
         return () => { mounted = false }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
-    // load booked times when date changes
     useEffect(() => {
         if (!date) return
         let mounted = true
@@ -182,10 +175,9 @@ const BookingForm = () => {
     return (
         <section id="booking">
             <h2>Онлайн запись</h2>
-            <div className="booking-form">
-                <form onSubmit={handleSubmit}>
-                    {/* Honeypot field (hidden for users) */}
-                    <input name="website" type="text" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+            <div className="booking-form fade-in">
+                <form onSubmit={handleSubmit} className="slide-up">
+                    <input name="fax" type="text" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
 
                     <div className="form-group">
                         <label>Ваше имя</label>
@@ -199,17 +191,22 @@ const BookingForm = () => {
                         <label>Услуга</label>
                         <select value={service} onChange={e => setService(e.target.value)} required>
                             <option value="">Выберите услугу</option>
-                            <option>Классическая стрижка - 1500₽</option>
-                            <option>Фейд - 2000₽</option>
-                            <option>Стрижка бороды - 1000₽</option>
-                            <option>Комплекс - 3500₽</option>
+                            <option>Мужская стрижка - 50 000</option>
+                            <option>Чистка лица - 50 000</option>
+                            <option>Бритье - 40 000</option>
+                            <option>Стрижка + борода + массаж - 100 000</option>
+                            <option>Окрашивание волос для мужчин - 40 000</option>
+                            <option>Стрижка и окрашивание - 80 000</option>
+                            <option>Окрашивание бороды - 70 000</option>
+                            <option>Стрижка для мальчиков - 40 000</option>
+                            <option>Стрижка + массаж - 70 000</option>
                         </select>
                     </div>
                     <div className="form-group">
                         <label>Дата</label>
                         <select value={date} onChange={e => setDate(e.target.value)} required>
                             {days.map(d => (
-                                <option key={d.value} value={d.value} disabled={d.taken >= (d.total || 11)}>
+                                <option key={d.value} value={d.value} disabled={d.taken >= (d.total || 12)}>
                                     {d.label} {typeof d.taken === 'number' ? `(${d.taken}/${d.total} занято)` : ''}
                                 </option>
                             ))}
@@ -217,8 +214,8 @@ const BookingForm = () => {
                     </div>
                     <div className="form-group">
                         <label>Время</label>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                            {['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'].map(slot => {
+                        <div className="time-slots">
+                            {['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'].map(slot => {
                                 const taken = bookedTimes.includes(slot)
                                 const isSelected = time === slot
                                 return (
@@ -227,25 +224,10 @@ const BookingForm = () => {
                                         type="button"
                                         onClick={() => { if (!taken) setTime(slot) }}
                                         disabled={taken}
-                                        aria-disabled={taken}
+                                        className={`time-slot-btn ${taken ? 'taken' : ''} ${isSelected ? 'selected' : ''}`}
                                         title={taken ? 'Занято' : `Выбрать ${slot}`}
-                                        style={{
-                                            padding: '8px 12px',
-                                            borderRadius: 6,
-                                            border: isSelected ? '2px solid #0066ff' : '1px solid #ccc',
-                                            background: taken ? '#f5f5f5' : (isSelected ? '#e6f0ff' : '#fff'),
-                                            color: taken ? '#888' : '#000',
-                                            cursor: taken ? 'not-allowed' : 'pointer',
-                                            position: 'relative'
-                                        }}
                                     >
-                                        <span>{slot}</span>
-                                        {taken && (
-                                            <span style={{ marginLeft: 8, fontSize: 12, color: '#b00020' }}>Занято</span>
-                                        )}
-                                        {isSelected && !taken && (
-                                            <span style={{ marginLeft: 8, fontSize: 12, color: '#0066ff' }}>Выбрано</span>
-                                        )}
+                                        {slot}
                                     </button>
                                 )
                             })}

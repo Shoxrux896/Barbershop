@@ -8,6 +8,7 @@ import Service from "./components/Service";
 import ModalContact from "./components/ModalContact";
 import Footer from "./components/Footer";
 import Admin from "./components/Admin";
+import ModalPage from "./components/ModalPage";
 
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
      <BookingForm/>
      <ModalContact/>
      <Footer/>
+     <ModalPage/>
      </>
     )}
     </>

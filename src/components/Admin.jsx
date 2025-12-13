@@ -1,203 +1,298 @@
-import { useEffect, useMemo, useState } from 'react'
-import { onBookingsSnapshot, markProcessed, removeBooking } from '../firebase'
+import { useEffect, useMemo, useState } from "react";
+import { onBookingsSnapshot, markProcessed, removeBooking, auth } from "../firebase";
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 
-function formatCreated(createdAt){
-  try{
-    if(!createdAt) return '-'
-    if(createdAt.toDate) return createdAt.toDate().toLocaleString()
-    return new Date(createdAt.seconds ? createdAt.seconds * 1000 : createdAt).toLocaleString()
-  }catch{ return String(createdAt) }
+function formatCreated(createdAt) {
+  try {
+    if (!createdAt) return "-";
+    if (createdAt.toDate) return createdAt.toDate().toLocaleString();
+    return new Date(
+      createdAt.seconds ? createdAt.seconds * 1000 : createdAt
+    ).toLocaleString();
+  } catch {
+    return String(createdAt);
+  }
 }
 
-const Admin = ()=>{
-  const [user, setUser] = useState(()=>{ try{ return sessionStorage.getItem('isAdmin') === '1' }catch{ return false } })
-  const [password, setPassword] = useState('')
-  const [bookings, setBookings] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [query, setQuery] = useState('')
-  const [dateFilter, setDateFilter] = useState('')
-  const [deletingIds, setDeletingIds] = useState([])
-  const [searchTerm, setSearchTerm] = useState('')
-  const [page, setPage] = useState(0)
-  const pageSize = 20
+export default function Admin() {
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
-  useEffect(()=>{
-    if(!user) return
-    const unsub = onBookingsSnapshot(setBookings)
-    return ()=> unsub && unsub()
-  }, [user])
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleLogin = (e)=>{
-    e && e.preventDefault()
-    setLoading(true)
-    const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123'
-    setTimeout(()=>{
-      if(password === ADMIN_PASSWORD){
-        try{ sessionStorage.setItem('isAdmin','1') }catch(err){ console.warn('sessionStorage set failed', err) }
-        setUser(true)
-      } else {
-        alert('Неверный пароль')
-      }
-      setLoading(false)
-    }, 250)
-  }
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
-  const handleLogout = ()=>{
-    try{ sessionStorage.removeItem('isAdmin') }catch(err){ console.warn('sessionStorage remove failed', err) }
-    setUser(false)
-    setBookings([])
-  }
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-  const dates = useMemo(()=>{
-    const s = new Set()
-    bookings.forEach(b=>{ if(b.date) s.add(b.date) })
-    return Array.from(s).sort()
-  }, [bookings])
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      // Success is handled by onAuthStateChanged
+    } catch (err) {
+      console.error(err);
+      setError("Ошибка входа: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // debounce search term to avoid filtering on every keystroke
-  useEffect(()=>{
-    const t = setTimeout(()=> setQuery(searchTerm), 300)
-    return ()=> clearTimeout(t)
-  }, [searchTerm])
+  const handleLogout = async () => {
+    await signOut(auth);
+  };
 
-  const filtered = useMemo(()=>{
-    const q = queryLower(query)
-    return bookings.filter(b=>{
-      if(dateFilter && b.date !== dateFilter) return false
-      if(!q) return true
-      return (String(b.name||'').toLowerCase().includes(q) || String(b.phone||'').toLowerCase().includes(q) || String(b.service||'').toLowerCase().includes(q))
-    })
-  }, [bookings, query, dateFilter])
+  const [bookings, setBookings] = useState([]);
+  const [search, setSearch] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
+  const [serviceFilter, setServiceFilter] = useState("");
+  const [sortField, setSortField] = useState("createdAt");
+  const [sortDir, setSortDir] = useState("desc");
+  const [page, setPage] = useState(0);
+  const [deleting, setDeleting] = useState([]);
 
-  // reset page when filters change
-  useEffect(()=>{ setPage(0) }, [query, dateFilter, bookings])
+  const pageSize = 20;
 
-  function queryLower(v){ return String(v||'').toLowerCase() }
+  useEffect(() => {
+    if (!user) return;
+    const unsub = onBookingsSnapshot((data) => setBookings(data));
+    return () => unsub && unsub();
+  }, [user]);
 
-  const total = bookings.length
-  const unprocessed = bookings.filter(b=>!b.processed).length
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
-  const paged = useMemo(()=> filtered.slice(page * pageSize, (page+1) * pageSize), [filtered, page])
+  const services = useMemo(() => {
+    const s = new Set();
+    bookings.forEach((b) => b.service && s.add(b.service));
+    return [...s];
+  }, [bookings]);
 
-  const doExport = ()=>{
-    if(filtered.length===0) return alert('Нет записей для экспорта')
-    const rows = [['ID','Имя','Телефон','Услуга','Дата','Время','Создано','Обработано']]
-    filtered.forEach(b=> rows.push([b.id, b.name||'', b.phone||'', b.service||'', b.date||'', b.time||'', formatCreated(b.createdAt), b.processed ? 'Да' : 'Нет']))
-    const csv = rows.map(r=> r.map(c=> '"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'bookings.csv'
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+  const dates = useMemo(() => {
+    const s = new Set();
+    bookings.forEach((b) => b.date && s.add(b.date));
+    return [...s].sort();
+  }, [bookings]);
 
-  const toggleProcessed = async (id, current)=>{
-    try{ await markProcessed(id, !current) }catch(e){ console.error(e); alert('Ошибка') }
-  }
 
-  const doRemove = async (id)=>{
-    if(!confirm('Удалить запись?')) return
-    setDeletingIds(s=>[...s, id])
-    try{
-      await removeBooking(id)
-     
-      setBookings(prev => prev.filter(b => b.id !== id))
-    }catch(e){ console.error(e); alert('Ошибка удаления') }
-    finally{ setDeletingIds(s => s.filter(x => x !== id)) }
-  }
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
 
-  if(!user){
+    return bookings.filter((b) => {
+      if (dateFilter && b.date !== dateFilter) return false;
+      if (serviceFilter && b.service !== serviceFilter) return false;
+
+      if (!q) return true;
+
+      return (
+        b.name.toLowerCase().includes(q) ||
+        b.phone.toLowerCase().includes(q) ||
+        String(b.service).toLowerCase().includes(q) ||
+        String(b.id).toLowerCase().includes(q)
+      );
+    });
+  }, [bookings, search, dateFilter, serviceFilter]);
+
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      let A = sortField === "createdAt" ? a.createdAt?.seconds || 0 : a[sortField];
+      let B = sortField === "createdAt" ? b.createdAt?.seconds || 0 : b[sortField];
+
+      if (A < B) return sortDir === "asc" ? -1 : 1;
+      if (A > B) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [filtered, sortField, sortDir]);
+
+  const totalPages = Math.ceil(sorted.length / pageSize);
+  const paged = sorted.slice(page * pageSize, (page + 1) * pageSize);
+
+  const toggleSort = (field) => {
+    if (field === sortField) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+  };
+
+  const toggleProcessed = async (id, current) => {
+    await markProcessed(id, !current);
+  };
+
+  const doRemove = async (id) => {
+    if (!confirm("Удалить запись?")) return;
+
+    setDeleting((p) => [...p, id]);
+
+    try {
+      await removeBooking(id);
+      setBookings((prev) => prev.filter((b) => b.id !== id));
+    } catch {
+      alert("Ошибка удаления");
+    }
+
+    setDeleting((p) => p.filter((x) => x !== id));
+  };
+
+  if (authLoading) return <div style={{ padding: 20, color: '#fff' }}>Загрузка...</div>;
+
+  if (!user) {
     return (
-      <div className="admin-panel" style={{ padding: 20 }}>
-        <h2>Админ — вход</h2>
+      <div className="admin-login">
+        <h2>Админ вход</h2>
+
         <form onSubmit={handleLogin}>
-          <div style={{ marginBottom: 8 }}>
-            <input value={password} onChange={e=>setPassword(e.target.value)} placeholder="Пароль администратора" type="password" required />
-          </div>
-          <button className="btn" disabled={loading} type="submit">Войти</button>
+          <input
+            type="email"
+            placeholder="Email (Admin)"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+
+          <input
+            type="password"
+            placeholder="Пароль"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+
+          <button disabled={loading}>
+            {loading ? "Вход..." : "Войти"}
+          </button>
+
+          {error && <div style={{ color: '#e53935', marginTop: 10 }}>{error}</div>}
         </form>
-        <p style={{ marginTop: 12 }}></p>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="admin-panel" style={{ padding: 20 }}>
-      <div className="admin-header" style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
-        <h2 style={{ margin: 0 }}>Админка — записи</h2>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div className="chip">Всего: {total}</div>
-          <div className="chip chip--danger">Непроверенные: {unprocessed}</div>
-          <button className="btn" onClick={doExport}>Экспорт CSV</button>
-          <button className="btn" onClick={handleLogout}>Выйти</button>
-        </div>
+    <div className="admin">
+      <div className="admin-top">
+        <h2>Записи ({user.email})</h2>
+        <button onClick={handleLogout}>Выйти</button>
       </div>
 
-      <div className="admin-controls" style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-        <input placeholder="Поиск по имени/тел/услуге" value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} />
-        <select value={dateFilter} onChange={e=>setDateFilter(e.target.value)}>
+      <div className="filters">
+        <input
+          placeholder="Поиск"
+          onChange={(e) => setSearch(e.target.value)}
+        />
+
+        <select
+          onChange={(e) => setDateFilter(e.target.value)}
+          value={dateFilter}
+        >
           <option value="">Все даты</option>
-          {dates.map(d=> <option key={d} value={d}>{d}</option>)}
+          {dates.map((d) => (
+            <option key={d}>{d}</option>
+          ))}
+        </select>
+
+        <select
+          onChange={(e) => setServiceFilter(e.target.value)}
+          value={serviceFilter}
+        >
+          <option value="">Все услуги</option>
+          {services.map((s) => (
+            <option key={s}>{s}</option>
+          ))}
         </select>
       </div>
 
-      <div className="admin-table-wrap">
-        {filtered.length === 0 ? (
-          <div>Нет записей</div>
-        ) : (
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Имя</th>
-                <th>Телефон</th>
-                <th>Услуга</th>
-                <th>Дата</th>
-                <th>Время</th>
-                <th>Создано</th>
-                <th>Статус</th>
-                <th>Действия</th>
+      <div className="table-wrapper">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th onClick={() => toggleSort("name")}>Имя</th>
+              <th onClick={() => toggleSort("phone")}>Телефон</th>
+              <th>Услуга</th>
+              <th onClick={() => toggleSort("date")}>Дата</th>
+              <th onClick={() => toggleSort("time")}>Время</th>
+              <th onClick={() => toggleSort("createdAt")}>Создано</th>
+              <th>Статус</th>
+              <th></th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {paged.map((b) => (
+              <tr key={b.id} className={!b.processed ? "row-unprocessed" : ""}>
+                <td data-label="Имя">{b.name}</td>
+                <td data-label="Телефон">{b.phone}</td>
+                <td data-label="Услуга">{b.service}</td>
+                <td data-label="Дата">{b.date}</td>
+                <td data-label="Время">{b.time}</td>
+                <td data-label="Создано">{formatCreated(b.createdAt)}</td>
+
+                <td data-label="Статус">
+                  {b.processed ? (
+                    <span className="chip ok">Готово</span>
+                  ) : (
+                    <span className="chip danger">Нет</span>
+                  )}
+                </td>
+
+                <td>
+                  <button
+                    onClick={() => toggleProcessed(b.id, b.processed)}
+                  >
+                    {b.processed ? "Отметить" : "Готово"}
+                  </button>
+
+                  <button
+                    className="danger"
+                    onClick={() => doRemove(b.id)}
+                    disabled={deleting.includes(b.id)}
+                  >
+                    {deleting.includes(b.id) ? "..." : "Удалить"}
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {paged.map(b=> (
-                <tr key={b.id} className={b.processed ? 'row--processed' : ''}>
-                  <td>{b.name}</td>
-                  <td>{b.phone}</td>
-                  <td>{b.service}</td>
-                  <td>{b.date}</td>
-                  <td>{b.time}</td>
-                  <td>{formatCreated(b.createdAt)}</td>
-                  <td>{b.processed ? <span className="chip">Обработано</span> : <span className="chip chip--danger">Непр.</span>}</td>
-                  <td>
-                    <button className="btn btn--small" onClick={()=>toggleProcessed(b.id, b.processed)}>{b.processed ? 'Отметить' : 'Готово'}</button>
-                    <button
-                      className="btn btn--small btn--danger"
-                      onClick={()=>doRemove(b.id)}
-                      style={{ marginLeft: 8 }}
-                      disabled={deletingIds.includes(b.id)}
-                      aria-busy={deletingIds.includes(b.id)}
-                    >
-                      {deletingIds.includes(b.id) ? 'Удаляю...' : 'Удалить'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+            ))}
+          </tbody>
+        </table>
       </div>
-      {/* pagination */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
-        <div className="pagination">
-          <button className="page-btn" onClick={()=>setPage(p=>Math.max(0,p-1))} disabled={page<=0}>‹ Prev</button>
-          <span className="page-info">{page+1} / {totalPages}</span>
-          <button className="page-btn" onClick={()=>setPage(p=>Math.min(totalPages-1,p+1))} disabled={page>=totalPages-1}>Next ›</button>
-        </div>
+
+      <div className="pagination">
+        <button disabled={page === 0} onClick={() => setPage(0)}>
+          « Первая
+        </button>
+
+        <button
+          disabled={page === 0}
+          onClick={() => setPage((p) => p - 1)}
+        >
+          ‹ Prev
+        </button>
+
+        <span>
+          {page + 1} / {totalPages || 1}
+        </span>
+
+        <button
+          disabled={page >= totalPages - 1}
+          onClick={() => setPage((p) => p + 1)}
+        >
+          Next ›
+        </button>
+
+        <button
+          disabled={page >= totalPages - 1}
+          onClick={() => setPage(totalPages - 1)}
+        >
+          Последняя »
+        </button>
       </div>
     </div>
-  )
+  );
 }
-
-export default Admin
