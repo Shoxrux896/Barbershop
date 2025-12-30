@@ -8,10 +8,8 @@ export default function ContactModal() {
 
   return (
     <>
-      
       <button className="contact-icon" onClick={openModal}>Связаться</button>
 
-    
       {open && (
         <div
           className="modal-overlay"
@@ -23,19 +21,23 @@ export default function ContactModal() {
             <button className="close-btn" onClick={closeModal}>
               ✕
             </button>
-<div className="modal-info">
-   <h2>Шохжахон
+            <div className="modal-info">
+              <h2>Шохжахон</h2>
+              <h2>Мастер</h2>
+            </div>
+
+            <p className="modal-phone">+998 88 188 43 85</p>
+
+            <div className="social-links">
+              <a href="https://www.instagram.com/barbershop_gentlemens_?igsh=dnNkbjNiMnBhOWx6" className="social-link" target="_blank" rel="noopener noreferrer">
+          
+                <span>Инстаграм</span>
+              </a>
+              <a href="https://t.me/Gentelmens_Barbershop" className="social-link" target="_blank" rel="noopener noreferrer">
               
-            </h2>
-            <h2>
-              Мастер 
-              
-            </h2>
-</div>
-            
-            <p>+998 88 188 43 85</p>
-            <a href="https://www.instagram.com/barbershop._.gentlemens?igsh=dnNkbjNiMnBhOWx6">Инстаграмм</a>
-            <a href="https://t.me/Gentelmens_Barbershop">Телеграмм</a>
+                <span>Телеграм</span>
+              </a>
+            </div>
           </div>
         </div>
       )}

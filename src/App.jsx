@@ -1,37 +1,47 @@
+import { Suspense, lazy } from "react";
 
-import BookingForm from "./components/BookingForm";
+const BookingForm = lazy(() => import("./components/BookingForm"));
 import Header from "./components/Header";
 import Hero from "./components/Hero";
-import Portfolio from "./components/Portfolio";
+const Portfolio = lazy(() => import("./components/Portfolio"));
 
-import Service from "./components/Service";
+const Service = lazy(() => import("./components/Service"));
 import ModalContact from "./components/ModalContact";
 import Footer from "./components/Footer";
-import Admin from "./components/Admin";
-import ModalPage from "./components/ModalPage";
+const Admin = lazy(() => import("./components/Admin"));
+const ModalPage = lazy(() => import("./components/ModalPage"));
 
 
 function App() {
-  
 
   return (
-    <>
-    {window.location.pathname === '/admin' ? (
-      <Admin />
-    ) : (
-     <>
-     <Header/>
-     <Hero/>
-     <Portfolio/>
-     <Service/>
+    <Suspense fallback={<div style={{
+      height: '100vh',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      background: '#0f1011',
+      color: '#c5a059',
+      fontSize: '1.5rem',
+      fontFamily: 'sans-serif',
+      textTransform: 'uppercase'
+    }}>Загрузка...</div>}>
+      {window.location.pathname === '/admin' ? (
+        <Admin />
+      ) : (
+        <>
+          <Header />
+          <Hero />
+          <Portfolio />
+          <Service />
 
-     <BookingForm/>
-     <ModalContact/>
-     <Footer/>
-     <ModalPage/>
-     </>
-    )}
-    </>
+          <BookingForm />
+          <ModalContact />
+          <Footer />
+          <ModalPage />
+        </>
+      )}
+    </Suspense>
   )
 }
 

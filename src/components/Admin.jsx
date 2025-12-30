@@ -62,6 +62,8 @@ export default function Admin() {
 
   const pageSize = 20;
 
+  const [deleteId, setDeleteId] = useState(null);
+
   useEffect(() => {
     if (!user) return;
     const unsub = onBookingsSnapshot((data) => setBookings(data));
@@ -126,9 +128,19 @@ export default function Admin() {
     await markProcessed(id, !current);
   };
 
-  const doRemove = async (id) => {
-    if (!confirm("Удалить запись?")) return;
+  const requestDelete = (id) => {
+    setDeleteId(id);
+  };
 
+  const cancelDelete = () => {
+    setDeleteId(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+
+    const id = deleteId;
+    setDeleteId(null);
     setDeleting((p) => [...p, id]);
 
     try {
@@ -251,7 +263,7 @@ export default function Admin() {
 
                   <button
                     className="danger"
-                    onClick={() => doRemove(b.id)}
+                    onClick={() => requestDelete(b.id)}
                     disabled={deleting.includes(b.id)}
                   >
                     {deleting.includes(b.id) ? "..." : "Удалить"}
@@ -293,6 +305,35 @@ export default function Admin() {
           Последняя »
         </button>
       </div>
+
+      {deleteId && (
+        <div className="modal-overlay" onClick={(e) => {
+          if (e.target === e.currentTarget) cancelDelete();
+        }}>
+          <div className="modal-content" style={{ borderColor: '#e53935' }}>
+            <h2 style={{ color: '#e53935' }}>Удаление</h2>
+            <p>Вы действительно хотите удалить эту запись?</p>
+            <p>Это действие нельзя отменить.</p>
+
+            <div style={{ display: 'flex', gap: 20, marginTop: 20, width: '100%' }}>
+              <button
+                className="btn"
+                onClick={cancelDelete}
+                style={{ flex: 1, borderColor: '#fff', color: '#fff' }}
+              >
+                Отмена
+              </button>
+              <button
+                className="btn"
+                onClick={confirmDelete}
+                style={{ flex: 1, background: '#e53935', borderColor: '#e53935', color: '#fff' }}
+              >
+                Удалить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

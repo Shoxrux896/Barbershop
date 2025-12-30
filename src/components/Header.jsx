@@ -13,7 +13,7 @@ const Header = () => {
         block: 'start',
       });
     }
-    setOpen(false); 
+    setOpen(false);
   };
 
   const navItems = [
@@ -27,9 +27,9 @@ const Header = () => {
   return (
     <header>
       <nav className={open ? 'nav nav--open' : 'nav'}>
-        
+
         <div className="logo">
-          <img src={logo} alt="logo" />
+          <img src={logo} alt="logo" loading="eager" decoding="async" />
         </div>
 
         <button
