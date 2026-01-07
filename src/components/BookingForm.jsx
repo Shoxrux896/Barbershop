@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { addBooking, fetchBookingsByDate } from '../firebase'
+import { addBooking, fetchBookingsByDate, sendTelegramNotification } from '../firebase'
 
 const getNextDays = (count = 14) => {
     const out = []
@@ -103,6 +103,10 @@ const BookingForm = () => {
             } else {
                 notifyBrowser('Новая запись', `Запись от ${name} на ${date} ${time}`)
             }
+
+            // Telegram Notification
+            sendTelegramNotification({ name, phone, service, date, time })
+
             // reset
             setName('')
             setPhone('')
@@ -148,6 +152,7 @@ const BookingForm = () => {
             })()
 
         return () => { mounted = false }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     useEffect(() => {

@@ -105,4 +105,40 @@ async function signOut() {
   return fbSignOut(auth)
 }
 
-export { app, analytics, db, auth, addBooking, fetchBookings, fetchBookingsByDate, onBookingsSnapshot, markProcessed, removeBooking, signIn, signUp, signOut, onAuthStateChanged }
+
+const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN
+const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID
+
+async function sendTelegramNotification(data) {
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+    console.warn('Telegram token or chat ID not set')
+    return
+  }
+
+  const text = `
+💈 Новая Запись! 💈
+
+👤 Имя: ${data.name}
+📱 Телефон: ${data.phone}
+✂️ Услуга: ${data.service}
+📅 Дата: ${data.date}
+⏰ Время: ${data.time}
+
+#NewBooking
+`
+
+  try {
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(text)}`
+    console.log('Attempting to send Telegram via Image beacon...')
+    console.log('Token starts with:', TELEGRAM_BOT_TOKEN.substring(0, 5) + '...')
+    console.log('Chat ID:', TELEGRAM_CHAT_ID)
+
+    // Use Image to bypass CORS completely for GET requests
+    new Image().src = url
+
+  } catch (err) {
+    console.error('Failed to send Telegram notification', err)
+  }
+}
+
+export { app, analytics, db, auth, addBooking, fetchBookings, fetchBookingsByDate, onBookingsSnapshot, markProcessed, removeBooking, signIn, signUp, signOut, onAuthStateChanged, sendTelegramNotification }

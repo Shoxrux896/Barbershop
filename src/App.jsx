@@ -9,7 +9,7 @@ const Service = lazy(() => import("./components/Service"));
 import ModalContact from "./components/ModalContact";
 import Footer from "./components/Footer";
 const Admin = lazy(() => import("./components/Admin"));
-const ModalPage = lazy(() => import("./components/ModalPage"));
+  
 
 
 function App() {
@@ -32,13 +32,13 @@ function App() {
         <>
           <Header />
           <Hero />
-          <Portfolio />
           <Service />
-
+  <Portfolio />
           <BookingForm />
           <ModalContact />
+         
           <Footer />
-          <ModalPage />
+         
         </>
       )}
     </Suspense>
